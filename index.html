@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#65a30d">
+  <title>Principales ríos españoles (6.º)</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      color: #172033;
+      background: #e8e8e6;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      --green: #65a30d;
+      --deep-green: #315914;
+      --lime: #b8ef78;
+      --gold: #f3a322;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow: hidden;
+      background: #e8e8e6;
+    }
+
+    button { font: inherit; }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .topbar {
+      height: 70px;
+      flex: 0 0 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      background: var(--green);
+      border-bottom: 3px solid #47780a;
+      box-shadow: 0 2px 3px #0003;
+      position: relative;
+      z-index: 2;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      text-align: center;
+      font-size: clamp(17px, 2vw, 23px);
+      font-weight: 600;
+      letter-spacing: .3px;
+      text-shadow: 1px 2px 2px #315914;
+    }
+
+    .question {
+      min-height: 96px;
+      margin: 0 1px;
+      border: 1px solid #4f850c;
+      border-radius: 0 0 11px 11px;
+      background: white;
+      box-shadow: 0 8px 0 #0002;
+      display: grid;
+      place-items: center;
+      position: relative;
+      z-index: 1;
+      padding: 18px 20px;
+    }
+
+    .question-progress {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      color: white;
+      background: #10220a;
+      border: 1px solid #71a830;
+      border-radius: 12px;
+      padding: 1px 7px 2px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .question h2 {
+      margin: 0;
+      font-size: clamp(20px, 2vw, 25px);
+      text-align: center;
+    }
+
+    .game-area {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: 8px 24px 58px;
+    }
+
+    .map-frame {
+      width: min(100%, 680px);
+      max-height: 100%;
+      aspect-ratio: 672 / 461;
+      position: relative;
+      overflow: visible;
+    }
+
+    .map-viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .map-viewport.dragging { cursor: grabbing; }
+
+    .map-layers {
+      position: absolute;
+      inset: 0;
+      transform-origin: 0 0;
+    }
+
+    .map-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+    }
+
+    .map-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+      touch-action: manipulation;
+    }
+
+    .point {
+      fill: #65a30d;
+      stroke: #263a1c;
+      stroke-width: 16;
+      paint-order: stroke;
+      cursor: pointer;
+      outline: none;
+      transition: fill .15s;
+    }
+
+    .point:hover, .point:focus {
+      fill: #83c61d;
+    }
+
+    .point.correct { fill: #b8ef78; stroke: #263a1c; }
+    .point.correct:hover, .point.correct:focus { fill: #b8ef78; }
+    .point.correct { pointer-events: none; }
+    .point.wrong { fill: #df4738; stroke: #632d22; }
+    .point.wrong:hover, .point.wrong:focus { fill: #df4738; }
+
+    .map-hint {
+      position: absolute;
+      top: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+      padding: 6px 26px;
+      border-radius: 0 0 20px 20px;
+      background: #5c990c;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap;
+      box-shadow: 0 2px 3px #0002;
+    }
+
+    .feedback {
+      position: absolute;
+      left: 50%;
+      bottom: 69px;
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: calc(100% - 32px);
+      color: #fff;
+      background: #263a1c;
+      border-radius: 18px;
+      padding: 8px 16px;
+      font-weight: 700;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity .15s;
+      pointer-events: none;
+    }
+
+    .feedback.show { opacity: 1; }
+    .feedback.bad { background: #963b29; }
+
+    .win-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: #0008;
+    }
+
+    .win-overlay[hidden] { display: none; }
+
+    .win-card {
+      width: min(100%, 380px);
+      padding: 30px 24px;
+      border: 3px solid #47780a;
+      border-radius: 22px;
+      background: white;
+      box-shadow: 0 8px 24px #0005;
+      text-align: center;
+    }
+
+    .win-card h2 {
+      margin: 0 0 12px;
+      color: var(--deep-green);
+      font-size: 28px;
+    }
+
+    .win-card p {
+      margin: 0 0 22px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .win-card button {
+      min-height: 48px;
+      padding: 10px 22px;
+      border: 1px solid #47780a;
+      border-radius: 24px;
+      background: var(--lime);
+      color: #14220e;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #0003;
+    }
+
+    .timer {
+      position: absolute;
+      left: 5px;
+      bottom: 10px;
+      min-width: 125px;
+      height: 55px;
+      border: 5px solid #65a30d;
+      border-radius: 30px;
+      background: white;
+      box-shadow: 0 4px 0 #0002;
+      display: grid;
+      place-items: center;
+      font-size: 27px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    .map-actions {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .round-button, .icon-button, .next-button {
+      border: 1px solid #85b54a;
+      color: #14220e;
+      background: var(--lime);
+      box-shadow: 0 3px 0 #0003;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: filter .12s, transform .12s;
+    }
+
+    .round-button:hover, .icon-button:hover, .next-button:hover { filter: brightness(1.06); }
+    .round-button:active, .icon-button:active, .next-button:active { transform: translateY(2px); box-shadow: 0 1px 0 #0003; }
+
+    .round-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .round-button.fit {
+      width: 56px;
+      height: 56px;
+      margin-left: -6px;
+    }
+
+    .next-button {
+      position: absolute;
+      left: 50%;
+      bottom: -41px;
+      width: 82px;
+      height: 82px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      border-width: 2px;
+      z-index: 2;
+    }
+
+    .next-button[hidden] { display: none; }
+    .next-button:active { transform: translate(-50%, 2px); }
+    .next-button svg { width: 29px; height: 29px; }
+
+    .bottom-actions {
+      position: absolute;
+      right: 6px;
+      bottom: 7px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-button {
+      width: 55px;
+      height: 55px;
+      border-radius: 12px;
+    }
+
+    .icon-button svg { width: 30px; height: 30px; }
+    .icon-button[aria-pressed="false"] { background: #d1d5cd; }
+
+    .map-credit {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff6;
+      font: 9px Arial, sans-serif;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      body { overflow: auto; }
+      .app { min-height: 100svh; }
+      .topbar { height: 62px; flex-basis: 62px; }
+      .topbar h1 { padding: 0 10px; font-size: 16px; }
+      .question { min-height: 86px; }
+      .game-area { min-height: 410px; padding: 20px 12px 80px; }
+      .map-frame { width: min(100%, 600px); max-height: none; }
+      .map-actions { right: 5px; top: auto; bottom: 90px; transform: none; }
+      .round-button { width: 38px; height: 38px; font-size: 26px; }
+      .round-button.fit { width: 48px; height: 48px; }
+      .next-button { bottom: -34px; width: 68px; height: 68px; }
+      .timer { bottom: 8px; min-width: 102px; height: 46px; font-size: 22px; border-width: 4px; }
+      .bottom-actions { bottom: 5px; }
+      .icon-button { width: 43px; height: 43px; }
+      .icon-button svg { width: 25px; height: 25px; }
+      .feedback { bottom: 84px; }
+      .map-hint { font-size: 12px; padding: 6px 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="topbar">
+      <h1>Principales ríos españoles (6.º)</h1>
+    </header>
+
+    <section class="question" aria-live="polite">
+      <span class="question-progress" id="progress">Ríos acertados: 0 / 15</span>
+      <h2 id="question">Tajo</h2>
+    </section>
+
+    <section class="game-area" aria-label="Mapa interactivo de España">
+      <div class="map-frame" id="mapFrame">
+        <div class="map-viewport">
+          <div class="map-layers">
+            <img class="map-image" src="mapa-rios.png" alt="Mapa de España con los ríos y las 15 opciones de la actividad">
+            <svg class="map-svg" id="mapSvg" viewBox="0 0 672 461" aria-label="Opciones interactivas de los ríos españoles">
+          <circle class="point" data-river="Miño" cx="186" cy="83" r="20" role="button" tabindex="0" aria-label="Punto del río Miño"><title>Miño</title></circle>
+          <circle class="point" data-river="Sil" cx="207" cy="33" r="20" role="button" tabindex="0" aria-label="Punto del río Sil"><title>Sil</title></circle>
+          <circle class="point" data-river="Nalón" cx="251" cy="33" r="20" role="button" tabindex="0" aria-label="Punto del río Nalón"><title>Nalón</title></circle>
+          <circle class="point" data-river="Nervión" cx="355" cy="44" r="20" role="button" tabindex="0" aria-label="Punto del río Nervión"><title>Nervión</title></circle>
+          <circle class="point" data-river="Bidasoa" cx="396" cy="44" r="20" role="button" tabindex="0" aria-label="Punto del río Bidasoa"><title>Bidasoa</title></circle>
+          <circle class="point" data-river="Duero" cx="274" cy="130" r="20" role="button" tabindex="0" aria-label="Punto del río Duero"><title>Duero</title></circle>
+          <circle class="point" data-river="Ebro" cx="425" cy="120" r="20" role="button" tabindex="0" aria-label="Punto del río Ebro"><title>Ebro</title></circle>
+          <circle class="point" data-river="Ter" cx="571" cy="89" r="20" role="button" tabindex="0" aria-label="Punto del río Ter"><title>Ter</title></circle>
+          <circle class="point" data-river="Llobregat" cx="534" cy="120" r="20" role="button" tabindex="0" aria-label="Punto del río Llobregat"><title>Llobregat</title></circle>
+          <circle class="point" data-river="Tajo" cx="285" cy="209" r="20" role="button" tabindex="0" aria-label="Punto del río Tajo"><title>Tajo</title></circle>
+          <circle class="point" data-river="Júcar" cx="443" cy="208" r="20" role="button" tabindex="0" aria-label="Punto del río Júcar"><title>Júcar</title></circle>
+          <circle class="point" data-river="Turia" cx="411" cy="239" r="20" role="button" tabindex="0" aria-label="Punto del río Turia"><title>Turia</title></circle>
+          <circle class="point" data-river="Guadiana" cx="270" cy="247" r="20" role="button" tabindex="0" aria-label="Punto del río Guadiana"><title>Guadiana</title></circle>
+          <circle class="point" data-river="Guadalquivir" cx="281" cy="308" r="20" role="button" tabindex="0" aria-label="Punto del río Guadalquivir"><title>Guadalquivir</title></circle>
+          <circle class="point" data-river="Segura" cx="410" cy="281" r="20" role="button" tabindex="0" aria-label="Punto del río Segura"><title>Segura</title></circle>
+            </svg>
+          </div>
+        </div>
+        <button class="next-button" id="nextQuestion" type="button" aria-label="Siguiente río">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m9 5 7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+      <div class="timer" id="timer" aria-label="Tiempo transcurrido">00:00</div>
+
+      <div class="map-actions" aria-label="Controles de zoom del mapa">
+        <button class="round-button" id="zoomIn" type="button" aria-label="Acercar">+</button>
+        <button class="round-button" id="zoomOut" type="button" aria-label="Alejar">−</button>
+      </div>
+
+      <div class="bottom-actions">
+        <button class="icon-button" id="fullscreen" type="button" aria-label="Pantalla completa">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <div class="win-overlay" id="winOverlay" role="dialog" aria-modal="true" aria-labelledby="winTitle" hidden>
+      <div class="win-card">
+        <h2 id="winTitle">¡Has ganado!</h2>
+        <p id="finalTime"></p>
+        <button id="restartGame" type="button">Jugar otra vez</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const rivers = [
+        "Tajo", "Miño", "Sil", "Nalón", "Nervión", "Bidasoa",
+        "Duero", "Ebro", "Ter", "Llobregat", "Júcar", "Turia",
+        "Guadiana", "Guadalquivir", "Segura"
+      ];
+      const points = [...document.querySelectorAll(".point")];
+      const question = document.querySelector("#question");
+      const progress = document.querySelector("#progress");
+      const feedback = document.querySelector("#feedback");
+      const mapViewport = document.querySelector(".map-viewport");
+      const mapLayers = document.querySelector(".map-layers");
+      const nextButton = document.querySelector("#nextQuestion");
+      const timer = document.querySelector("#timer");
+      const winOverlay = document.querySelector("#winOverlay");
+      const finalTime = document.querySelector("#finalTime");
+      const restartButton = document.querySelector("#restartGame");
+      let questionIndex = 0;
+      const solvedRivers = new Set();
+      let completed = false;
+      let zoom = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+      let dragStart = null;
+      let elapsedSeconds = 0;
+      let timerInterval;
+      let advanceTimeout;
+
+      const formatTime = seconds => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+      };
+
+      const speak = (text, rate, pitch) => {
+        if (!("speechSynthesis" in window)) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US";
+        utterance.rate = rate;
+        utterance.pitch = pitch;
+        window.speechSynthesis.speak(utterance);
+      };
+
+      const showFeedback = (text, isBad) => {
+        feedback.textContent = text;
+        feedback.classList.toggle("bad", isBad);
+        feedback.classList.add("show");
+      };
+
+      const advanceQuestion = () => {
+        window.clearTimeout(advanceTimeout);
+        advanceTimeout = undefined;
+        if (completed) return;
+        points.forEach(point => point.classList.remove("wrong"));
+        questionIndex = (questionIndex + 1) % rivers.length;
+        question.textContent = rivers[questionIndex];
+        feedback.classList.remove("show");
+      };
+
+      const selectPoint = point => {
+        if (completed) return;
+        const selectedRiver = point.dataset.river;
+        const expectedRiver = rivers[questionIndex];
+        if (solvedRivers.has(selectedRiver)) return;
+        if (solvedRivers.has(expectedRiver)) return;
+        if (selectedRiver === expectedRiver) {
+          solvedRivers.add(expectedRiver);
+          point.classList.remove("wrong");
+          point.classList.add("correct");
+          point.setAttribute("aria-disabled", "true");
+          point.setAttribute("tabindex", "-1");
+          progress.textContent = `Ríos acertados: ${solvedRivers.size} / ${rivers.length}`;
+          if (solvedRivers.size === rivers.length) {
+            completed = true;
+            nextButton.hidden = true;
+            finalTime.textContent = `Has tardado ${formatTime(elapsedSeconds)}.`;
+            winOverlay.hidden = false;
+            window.clearInterval(timerInterval);
+            showFeedback("¡Has acertado todos los ríos! ¡Has ganado!", false);
+          } else {
+            showFeedback(`¡Correcto! ${selectedRiver}`, false);
+            advanceTimeout = window.setTimeout(advanceQuestion, 700);
+          }
+          speak("six seveeeeeeeeeeeeeeeeeeeeeeeeeeeeen", 0.78, 1.2);
+        } else {
+          if (!point.classList.contains("correct")) point.classList.add("wrong");
+          showFeedback("¡Uy! Prueba con otro punto.", true);
+          speak("waaac waaaaaaac wac waaaaaaaaaaaaaaaaaaaaaaaac", 0.9, 0.7);
+        }
+      };
+
+      points.forEach(point => {
+        point.addEventListener("click", () => selectPoint(point));
+        point.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectPoint(point);
+          }
+        });
+      });
+
+      nextButton.addEventListener("click", () => {
+        advanceQuestion();
+      });
+
+      restartButton.addEventListener("click", () => {
+        window.clearTimeout(advanceTimeout);
+        window.clearInterval(timerInterval);
+        questionIndex = 0;
+        solvedRivers.clear();
+        completed = false;
+        zoom = 1;
+        offsetX = 0;
+        offsetY = 0;
+        elapsedSeconds = 0;
+        question.textContent = rivers[questionIndex];
+        progress.textContent = `Ríos acertados: 0 / ${rivers.length}`;
+        timer.textContent = formatTime(elapsedSeconds);
+        points.forEach(point => {
+          point.classList.remove("correct", "wrong");
+          point.removeAttribute("aria-disabled");
+          point.setAttribute("tabindex", "0");
+        });
+        nextButton.hidden = false;
+        winOverlay.hidden = true;
+        feedback.classList.remove("show", "bad");
+        applyZoom();
+        timerInterval = window.setInterval(() => {
+          elapsedSeconds += 1;
+          timer.textContent = formatTime(elapsedSeconds);
+        }, 1000);
+      });
+
+      const applyZoom = () => {
+        mapLayers.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`;
+      };
+      const clampOffsets = () => {
+        const bounds = mapViewport.getBoundingClientRect();
+        offsetX = Math.min(0, Math.max(bounds.width * (1 - zoom), offsetX));
+        offsetY = Math.min(0, Math.max(bounds.height * (1 - zoom), offsetY));
+      };
+      const zoomAt = (clientX, clientY, amount) => {
+        const bounds = mapViewport.getBoundingClientRect();
+        const x = clientX - bounds.left;
+        const y = clientY - bounds.top;
+        const nextZoom = Math.max(1, Math.min(3, zoom + amount));
+        if (nextZoom === zoom) return;
+        offsetX = x - (x - offsetX) * (nextZoom / zoom);
+        offsetY = y - (y - offsetY) * (nextZoom / zoom);
+        zoom = nextZoom;
+        if (zoom === 1) {
+          offsetX = 0;
+          offsetY = 0;
+        } else {
+          clampOffsets();
+        }
+        applyZoom();
+      };
+      mapViewport.addEventListener("pointerdown", event => {
+        if (event.button !== 0 || event.target.closest(".point")) return;
+        dragStart = { x: event.clientX, y: event.clientY, offsetX, offsetY };
+        mapViewport.classList.add("dragging");
+        mapViewport.setPointerCapture(event.pointerId);
+      });
+      mapViewport.addEventListener("pointermove", event => {
+        if (!dragStart) return;
+        offsetX = dragStart.offsetX + event.clientX - dragStart.x;
+        offsetY = dragStart.offsetY + event.clientY - dragStart.y;
+        clampOffsets();
+        applyZoom();
+      });
+      const stopDragging = () => {
+        dragStart = null;
+        mapViewport.classList.remove("dragging");
+      };
+      mapViewport.addEventListener("pointerup", stopDragging);
+      mapViewport.addEventListener("pointercancel", stopDragging);
+      mapViewport.addEventListener("wheel", event => {
+        event.preventDefault();
+        zoomAt(event.clientX, event.clientY, event.deltaY < 0 ? 0.2 : -0.2);
+      }, { passive: false });
+      document.querySelector("#zoomIn").addEventListener("click", () => {
+        const bounds = mapViewport.getBoundingClientRect();
+        zoomAt(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, 0.2);
+      });
+      document.querySelector("#zoomOut").addEventListener("click", () => {
+        const bounds = mapViewport.getBoundingClientRect();
+        zoomAt(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, -0.2);
+      });
+
+      document.querySelector("#fullscreen").addEventListener("click", async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await document.querySelector("#app").requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (error) {
+          showFeedback("No se pudo activar la pantalla completa.", true);
+        }
+      });
+
+      timerInterval = window.setInterval(() => {
+        elapsedSeconds += 1;
+        timer.textContent = formatTime(elapsedSeconds);
+      }, 1000);
+    })();
+  </script>
+</body>
+</html>
